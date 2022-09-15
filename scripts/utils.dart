@@ -5,6 +5,7 @@ import 'package:glob/glob.dart';
 import 'package:glob/list_local_fs.dart';
 import 'package:nrs_mod/nrs_mod.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 class FileSource {
   Source source;
@@ -45,10 +46,10 @@ class EntryBlockFinder {
 
   EntryBlockFinder._create(this.openedFiles);
 
-  static Future<EntryBlockFinder> create() async {
+  static Future<EntryBlockFinder> create(String nrsImplPath) async {
     final openedFiles = <String, FileSource>{};
     final sources = await Glob("**.kt", recursive: true)
-        .list(root: "../nrs-impl-kt/impl")
+        .list(root: p.join(nrsImplPath, "impl"))
         .asyncMap((fse) => FileSource.create(fse.path))
         .forEach((fs) => openedFiles[fs.path] = fs);
     return EntryBlockFinder._create(openedFiles);
@@ -120,4 +121,14 @@ Future<String?> _loadVGMDBString(http.Client client, String route) async {
     cacheFile.writeAsStringSync(response.body);
   }
   return response.body;
+}
+
+String? stripPrefix(String s, String prefix) {
+  return s.startsWith(prefix) ? s.substring(prefix.length) : null;
+}
+
+bool isIgnoreLine(String? s, String filename, String version) {
+  return s != null &&
+      (s.contains("generated($filename v$version)") ||
+          s.contains("impl_overridden"));
 }

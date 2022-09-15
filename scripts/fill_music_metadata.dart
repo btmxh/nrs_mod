@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:nrs_mod/src/lines.dart';
 import 'package:nrs_mod/src/parse.dart';
@@ -9,19 +9,18 @@ import 'utils.dart';
 const filename = "fill_music_metadata.dart";
 const version = "0.1.1";
 
-String? stripPrefix(String s, String prefix) {
-  return s.startsWith(prefix) ? s.substring(prefix.length) : null;
-}
-
 bool ignoreLine(String? s) {
-  return s != null &&
-      (s.contains("generated($filename v$version)") ||
-          s.contains("impl_overridden"));
+  return isIgnoreLine(s, filename, version);
 }
 
-void main() async {
+void main(List<String> args) async {
+  if (args.length != 1) {
+    print("Usage: [dart run] scripts/$filename <path-to-nrs-impl-kt>");
+    exit(1);
+  }
+
   final client = http.Client();
-  final finder = await EntryBlockFinder.create();
+  final finder = await EntryBlockFinder.create(args[0]);
   final ids = finder.getAllIDs();
   for (final id in ids.keys) {
     if (!id.startsWith("M-VGMDB")) {
@@ -34,6 +33,7 @@ void main() async {
 
     final location = ids[id]!;
 
+    print("Processing entry $id");
     try {
       final indent = location.block.indentation;
       final lineNumbers =
@@ -48,7 +48,6 @@ void main() async {
         InsertPosition(EntryLine.firstLine, InsertKind.before),
       ])!;
 
-      print("Processing entry $id");
       if (id.contains("M-VGMDB-AR") &&
           !ignoreLine(findLine(EntryLine.title, lineNumbers, source))) {
         final name = (await apiResult)["name"];

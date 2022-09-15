@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:nrs_mod/src/lines.dart';
 import 'package:nrs_mod/src/parse.dart';
 import 'package:nrs_mod/src/patch.dart';
+import 'package:path/path.dart' as p;
 
 import 'utils.dart';
 
@@ -19,20 +20,14 @@ class Anime {
   Anime(this.title, this.episodes);
 }
 
-String? stripPrefix(String s, String prefix) {
-  return s.startsWith(prefix) ? s.substring(prefix.length) : null;
-}
-
 bool ignoreLine(String? s) {
-  return s != null &&
-      (s.contains("generated($filename v$version)") ||
-          s.contains("impl_overridden"));
+  return isIgnoreLine(s, filename, version);
 }
 
-Future<Map<String, Anime>> createAnimeIDMap() async {
-  final aod = jsonDecode(await File(
-          '../anime-offline-database/anime-offline-database-minified.json')
-      .readAsString());
+Future<Map<String, Anime>> createAnimeIDMap(String relativePath) async {
+  final jsonFile =
+      File(p.join(relativePath, 'anime-offline-database-minified.json'));
+  final aod = jsonDecode(await jsonFile.readAsString());
   final map = <String, Anime>{};
   for (final anime in aod["data"]) {
     final sources = anime["sources"];
@@ -50,9 +45,15 @@ Future<Map<String, Anime>> createAnimeIDMap() async {
   return map;
 }
 
-void main() async {
-  final aodMap = await createAnimeIDMap();
-  final finder = await EntryBlockFinder.create();
+void main(List<String> args) async {
+  if (args.length != 2) {
+    print(
+        "Usage: [dart run] scripts/$filename <path-to-nrs-impl-kt> <path-to-anime-offline-database>");
+    exit(1);
+  }
+
+  final aodMap = await createAnimeIDMap(args[1]);
+  final finder = await EntryBlockFinder.create(args[0]);
   final ids = finder.getAllIDs();
   for (final id in ids.keys) {
     if (!id.startsWith("A-MAL")) {
@@ -61,21 +62,15 @@ void main() async {
 
     final location = ids[id]!;
 
+    print("Processing entry $id");
     try {
       final indent = location.block.indentation;
       final lineNumbers =
           SourceBlockLineNumIterable(location.block, location.file.source)
               .toList();
       final source = location.file.source;
-
       final changes = <ListChange<String>>[];
-      final titleChangeRange = getInsertLineRange(lineNumbers, source, [
-        InsertPosition(EntryLine.title, InsertKind.override),
-        InsertPosition(EntryLine.id, InsertKind.after),
-        InsertPosition(EntryLine.firstLine, InsertKind.before),
-      ])!;
 
-      print("Processing entry $id");
       if (id.contains("A-MAL")) {
         final malId = id.split("-")[2];
         final anime = aodMap[malId];
@@ -148,15 +143,13 @@ void main() async {
         }
       }
 
-      patchList(location.file.source, changes);
+      finder.submitPatch(location.file.path, changes);
     } catch (e) {
       print("Error: $e");
     }
   }
 
-  for (final fs in finder.openedFiles.values) {
-    await fs.save();
-  }
+  await finder.patch();
 }
 
 String quote(String s) {

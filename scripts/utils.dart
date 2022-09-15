@@ -101,8 +101,9 @@ Future<dynamic> loadVGMDB(http.Client client, String route) async {
 }
 
 Uri buildVGMDBUri(String route) {
-  return Uri.parse('http://127.0.0.1:9990$route?format=json');
-  // return Uri.https("vgmdb.info", route);
+  // if you want to self-host
+  // return Uri.parse('http://127.0.0.1:9990$route?format=json');
+  return Uri.https("vgmdb.info", route, {'format': 'json'});
 }
 
 Future<String?> _loadVGMDBString(http.Client client, String route) async {

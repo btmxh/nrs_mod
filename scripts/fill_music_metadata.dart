@@ -14,22 +14,24 @@ bool ignoreLine(String? s) {
 }
 
 void main(List<String> args) async {
-  if (args.length != 1) {
-    print("Usage: [dart run] scripts/$filename <path-to-nrs-impl-kt>");
+  if (args.length != 1 && args.length != 2) {
+    print(
+        "Usage: [dart run] scripts/$filename <path-to-nrs-impl-kt> [<vgmdb-api-prefix>]");
     exit(1);
   }
 
   final client = http.Client();
   final finder = await EntryBlockFinder.create(args[0]);
   final ids = finder.getAllIDs();
+  final vgmdbApiPrefix = args.length == 2 ? args[1] : "https://vgmdb.info";
   for (final id in ids.keys) {
     if (!id.startsWith("M-VGMDB")) {
       continue;
     }
 
     final tokens = id.split('-');
-    late final apiResult = loadVGMDB(
-        client, (tokens[2] == 'AL' ? "/album/" : "/artist/") + tokens[3]);
+    late final apiResult = loadVGMDB(client, vgmdbApiPrefix,
+        (tokens[2] == 'AL' ? "/album/" : "/artist/") + tokens[3]);
 
     final location = ids[id]!;
 

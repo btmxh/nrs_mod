@@ -91,8 +91,9 @@ class EntryBlockFinder {
   }
 }
 
-Future<dynamic> loadVGMDB(http.Client client, String route) async {
-  final source = await _loadVGMDBString(client, route);
+Future<dynamic> loadVGMDB(
+    http.Client client, String apiPrefix, String route) async {
+  final source = await _loadVGMDBString(client, apiPrefix, route);
   if (source == null) {
     return null;
   }
@@ -100,20 +101,15 @@ Future<dynamic> loadVGMDB(http.Client client, String route) async {
   return jsonDecode(source);
 }
 
-Uri buildVGMDBUri(String route) {
-  // if you want to self-host
-  // return Uri.parse('http://127.0.0.1:9990$route?format=json');
-  return Uri.https("vgmdb.info", route, {'format': 'json'});
-}
-
-Future<String?> _loadVGMDBString(http.Client client, String route) async {
+Future<String?> _loadVGMDBString(
+    http.Client client, String apiPrefix, String route) async {
   final cacheFile = File(".vgmdb-cache$route");
   cacheFile.parent.create(recursive: true);
   if (cacheFile.existsSync()) {
     return cacheFile.readAsStringSync();
   }
 
-  final response = await client.get(buildVGMDBUri(route));
+  final response = await client.get(Uri.parse('$apiPrefix$route?format=json'));
   if (response.statusCode ~/ 100 != 2) {
     print("HTTP Error: ${response.statusCode}. Body: ${response.body}");
     return null;

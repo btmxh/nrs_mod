@@ -116,6 +116,7 @@ Future<String?> _loadVGMDBString(http.Client client, String route) async {
   final response = await client.get(buildVGMDBUri(route));
   if (response.statusCode ~/ 100 != 2) {
     print("HTTP Error: ${response.statusCode}. Body: ${response.body}");
+    return null;
   }
 
   if (!cacheFile.existsSync()) {

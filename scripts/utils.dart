@@ -75,7 +75,7 @@ class EntryBlockFinder {
     return res;
   }
 
-  void submitPatch(String filename, Iterable<ListChange> changes) {
+  void submitPatch(String filename, Iterable<ListChange<String>> changes) {
     patches.putIfAbsent(filename, () => []).addAll(changes);
   }
 

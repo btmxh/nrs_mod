@@ -3,11 +3,11 @@ import 'dart:io';
 
 void main(List<String> args) async {
   if (args.isEmpty) {
-    print("Usage: [dart run] create_file.dart [filepath]");
+    print("Usage: [dart run] create_file.dart [--force|-f] [filepath]");
     exit(1);
   }
 
-  final path = args.first;
+  final path = args.last;
   final template = await File("res/template.kt").readAsString();
 
   final tokens = path.split('.');
@@ -22,12 +22,19 @@ void main(List<String> args) async {
   final content = template
       .replaceAll("\$PATH", packagePath.isNotEmpty ? ".$packagePath" : "")
       .replaceAll("\$NAME", name);
-  final filePath = p.joinAll([
+  final file = File(p.joinAll([
     "..",
     "impl/src/main/kotlin/com/dah/nrs/",
     tokens.isEmpty? "." : tokens.join('/'),
     "$name.kt"
-  ]);
+  ]));
 
-  await File(filePath).writeAsString(content);
+  if(file.existsSync()) {
+    print("WARN: $file already exists");
+    if(!args.contains("-f") && !args.contains("--force")) {
+      exit(1);
+    }
+  }
+
+  file.writeAsString(content);
 }

@@ -6,6 +6,6 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-fun $NAME() {
+fun DSLScope.$NAME() {
 
 }

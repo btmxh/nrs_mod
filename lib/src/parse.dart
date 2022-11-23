@@ -62,35 +62,34 @@ class SourceBlockLineNumIterator extends Iterator<int> {
       }
       final line = trimSource(
           itr.source[itr.block.range.from.line + currentLineRelativeIndex]);
-      if (openLBrace(line)) {
-        nestingLevel--;
-      } else if (closeRBrace(line)) {
-        nestingLevel++;
-      }
+      nestingLevel += processBraceDelta(line);
     } while (nestingLevel != 0);
     return true;
   }
 }
 
-bool openLBrace(String line) {
-  return trimSource(line).endsWith("{");
-}
+int processBraceDelta(String line) {
+  final regex = RegExp("nrs_mod\\(nesting=(-?\\d+)\\)");
+  final mods = regex.allMatches(line);
+  if (mods.isNotEmpty) {
+    return mods.map((m) => int.parse(m.group(1)!)).reduce((a, b) => a + b);
+  }
 
-bool closeRBrace(String line) {
   line = trimSource(line);
-  return line.endsWith("}") &&
-      (!line.contains("{") || line.contains("override increase nesting"));
+  if(line.endsWith("{")) {
+    return -1;
+  } else if(line.endsWith("}") && !line.contains("{")) {
+    return 1;
+  }
+
+  return 0;
 }
 
 SourceLocation? _findLBrace(Source source, int lineNum) {
   int nestingLevel = 0;
   for (int i = lineNum - 1; i >= 0; i--) {
     final line = source[i];
-    if (openLBrace(line)) {
-      nestingLevel--;
-    } else if (closeRBrace(line)) {
-      nestingLevel++;
-    }
+    nestingLevel += processBraceDelta(line);
     if (nestingLevel < 0) {
       int col = line.lastIndexOf("{");
       return SourceLocation(i, col);
@@ -103,13 +102,12 @@ SourceLocation? _findRBrace(Source source, int lineNum) {
   int nestingLevel = 0;
   for (int i = lineNum + 1; i < source.length; i++) {
     final line = source[i];
-    if (openLBrace(line)) {
-      nestingLevel--;
-    } else if (closeRBrace(line)) {
-      nestingLevel++;
-    }
+    nestingLevel += processBraceDelta(line);
     if (nestingLevel > 0) {
       int col = line.lastIndexOf("}");
+      if(col == -1) {
+        col = line.length;
+      }
       return SourceLocation(i, col);
     }
   }
@@ -179,6 +177,15 @@ SourceBlock? getEntryBlock(Source source, String id) {
   }
 
   final range = _findBlock(source, idLine);
+  if (range == null) {
+    return null;
+  }
+  return SourceBlock(range, indentation);
+}
+
+SourceBlock? getFileMainFunction(List<String> content, int lineIndex) {
+  final indentation = _getLineIndentation(content[lineIndex]);
+  final range = _findBlock(content, lineIndex);
   if (range == null) {
     return null;
   }

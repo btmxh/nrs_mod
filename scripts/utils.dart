@@ -66,6 +66,33 @@ class EntryBlockFinder {
     }
   }
 
+  NullableFileSourceBlock findFileMainFunctionBlock(String query) {
+    final matches = openedFiles.keys.where((p) => p.contains(query));
+    if (matches.isEmpty) {
+      throw StateError("No file matches given name");
+    } else if (matches.length > 2) {
+      print("More than one matches:");
+      for (final match in matches) {
+        print(match);
+      }
+      throw StateError("More than one matches for given name");
+    }
+    final path = matches.first;
+    final name = p.basenameWithoutExtension(path);
+    final toFind = name == "NRSImplMain"
+        ? RegExp("fun main\\(\\)")
+        : RegExp("fun DSLScope.`?$name`?\\(\\)");
+    final file = openedFiles[matches.first]!;
+    final index = file.source.indexWhere((line) => line.contains(toFind));
+    if (index < 0) {
+      throw StateError(
+          "Local main function not found in file ${matches.first}");
+    }
+
+    final block = getFileMainFunction(file.source, index + 1);
+    return NullableFileSourceBlock(block, file);
+  }
+
   Map<String, FileSourceBlock> getAllIDs() {
     final res = <String, FileSourceBlock>{};
     for (final fs in openedFiles.values) {
@@ -79,13 +106,17 @@ class EntryBlockFinder {
     patches.putIfAbsent(filename, () => []).addAll(changes);
   }
 
-  Future<void> patch() async {
+  Future<void> patch({bool save: true}) async {
     for (final filename in openedFiles.keys) {
       final fs = openedFiles[filename]!;
       final patch = patches[filename];
       if (patch != null) {
         patchList(fs.source, patch);
-        await fs.save();
+        patch.clear();
+        print(fs.source);
+        if (save) {
+          await fs.save();
+        }
       }
     }
   }

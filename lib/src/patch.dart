@@ -13,10 +13,23 @@ class ListChange<T> {
         to = range.to;
 }
 
+void stableSort<T>(List<T> list, int Function(T, T) compare) {
+  // naive bubble sort, may be optimized if needed
+  for(var i = 0; i < list.length; i++) {
+    for(var j = i + 1; j < list.length; j++) {
+      if(compare(list[i], list[j]) > 0) {
+        final temp = list[i];
+        list[i] = list[j];
+        list[j] = temp;
+      }
+    }
+  }
+}
+
 List<ListChange<T>> _normalizeListChanges<T>(Iterable<ListChange<T>> changes) {
   // sort the changelist in reverse order
-  final list = changes.toList();
-  list.sort((c1, c2) => c2.from.compareTo(c1.from));
+  final list = List<ListChange<T>>.from(changes.toList().reversed);
+  stableSort<ListChange<T>>(list, (c1, c2) => c2.from.compareTo(c1.from));
   for (int i = list.length - 1; i - 1 >= 0; i--) {
     final c1 = list[i];
     final c2 = list[i - 1];

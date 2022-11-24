@@ -113,7 +113,6 @@ class EntryBlockFinder {
       if (patch != null) {
         patchList(fs.source, patch);
         patch.clear();
-        print(fs.source);
         if (save) {
           await fs.save();
         }

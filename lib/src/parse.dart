@@ -100,7 +100,7 @@ SourceLocation? _findLBrace(Source source, int lineNum) {
 
 SourceLocation? _findRBrace(Source source, int lineNum) {
   int nestingLevel = 0;
-  for (int i = lineNum + 1; i < source.length; i++) {
+  for (int i = lineNum; i < source.length; i++) {
     final line = source[i];
     nestingLevel += processBraceDelta(line);
     if (nestingLevel > 0) {
